@@ -1,0 +1,118 @@
+{
+  "bio": {
+    "rows": 380,
+    "scored": 317,
+    "unscored": 63,
+    "risk_counts": {
+      "lower": 213,
+      "unscored": 63,
+      "very_high": 41,
+      "high": 39,
+      "leaky": 24
+    },
+    "category_counts": {
+      "metabolites": 112,
+      "lipids": 37,
+      "microbial_signals": 31,
+      "secreted_signals": 29,
+      "proteins_peptides": 28,
+      "cell_debris_DAMPs": 27,
+      "salts_buffers_ions": 24,
+      "gases_volatiles": 23,
+      "bioactive_small_molecules": 21,
+      "assay_readouts": 19,
+      "reactive_species": 16,
+      "secreted_proteins_enzymes": 13
+    }
+  },
+  "payne": {
+    "rows": 36,
+    "auroc": [
+      {
+        "endpoint": "measurable transfer >=0.005",
+        "n_positive": 24,
+        "n_negative": 12,
+        "AUROC": 0.9548611111111112,
+        "bootstrap_CI_2p5": 0.8763636363636363,
+        "bootstrap_median": 0.96,
+        "bootstrap_CI_97p5": 1.0,
+        "permutation_p_upper_tail": 0.000249937515621
+      },
+      {
+        "endpoint": "leaky transfer >=0.05",
+        "n_positive": 21,
+        "n_negative": 15,
+        "AUROC": 0.9015873015873016,
+        "bootstrap_CI_2p5": 0.7870370370370371,
+        "bootstrap_median": 0.907936507936508,
+        "bootstrap_CI_97p5": 0.9832775919732442,
+        "permutation_p_upper_tail": 0.000249937515621
+      },
+      {
+        "endpoint": "high transfer >=0.2",
+        "n_positive": 13,
+        "n_negative": 23,
+        "AUROC": 0.9565217391304348,
+        "bootstrap_CI_2p5": 0.8795986622073578,
+        "bootstrap_median": 0.9625,
+        "bootstrap_CI_97p5": 1.0,
+        "permutation_p_upper_tail": 0.000249937515621
+      }
+    ],
+    "bridge_rows": 22,
+    "bridge_spearman": 0.8645,
+    "bridge_pearson": 0.8946,
+    "threshold_metrics": [
+      {
+        "endpoint": "Payne leaky crosstalk >=0.05",
+        "cutoff": -0.2563230876636397,
+        "TP": 10,
+        "FP": 2,
+        "TN": 9,
+        "FN": 1,
+        "sensitivity": 0.9090909090909092,
+        "specificity": 0.8181818181818182,
+        "accuracy": 0.8636363636363636,
+        "false_negative_rate": 0.0909090909090909,
+        "false_positive_rate": 0.1818181818181818
+      },
+      {
+        "endpoint": "Payne high crosstalk >=0.2",
+        "cutoff": 0.145360952294322,
+        "TP": 6,
+        "FP": 3,
+        "TN": 12,
+        "FN": 1,
+        "sensitivity": 0.8571428571428571,
+        "specificity": 0.8,
+        "accuracy": 0.8181818181818182,
+        "false_negative_rate": 0.1428571428571428,
+        "false_positive_rate": 0.2
+      }
+    ]
+  },
+  "chembl": {
+    "rows": 2854815,
+    "scored": 2784347,
+    "unscored": 70468,
+    "named": 42299,
+    "max_phase_nonmissing": 14623,
+    "risk_counts": {
+      "lower": 555489,
+      "leaky": 223942,
+      "high": 1405910,
+      "very_high": 599006,
+      "unscored": 70468
+    },
+    "molecule_type_counts": {
+      "Small molecule": 1915414,
+      "missing": 526709,
+      "Unknown": 390341,
+      "Protein": 22241,
+      "Oligonucleotide": 57,
+      "Oligosaccharide": 53
+    },
+    "full_scored_csv_gz": "not_written_in_static_build; summary counts from full ChEMBL36 property scan"
+  },
+  "lookup_records": 16382
+}
