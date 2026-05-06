@@ -6,6 +6,8 @@
 
 The main tool is located in [DROPLET_RISK.html](https://github.com/matteobroketa/Droplet-Risk-Atlas/blob/main/DROPLET_RISK_publication_ready_unified_corrected_v2.html)
 
+---
+
 ### Key Features
 * **Unified Scoring:** Consistent descriptor pipeline applied to over **2.8 million ChEMBL36 records** and curated biological molecules.
 * **Empirical Calibration:** Uses the 36-compound Payne ESI-MS dataset as a gold-standard calibration set.
