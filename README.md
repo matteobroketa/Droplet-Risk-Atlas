@@ -4,7 +4,7 @@
 
 ---
 
-The main tool is located in [DROPLET_RISK.html](https://github.com/matteobroketa/Droplet-Risk-Atlas/blob/main/DROPLET_RISK_publication_ready_unified_corrected_v2.html)
+The main tool is located in [DROPLET_RISK.html](https://matteobroketa.github.io/Droplet-Risk-Atlas/)
 
 ---
 
