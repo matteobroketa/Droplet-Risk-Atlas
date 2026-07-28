@@ -1,0 +1,157 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="DROPLET-RISK descriptor atlas for prioritizing small-molecule leakage risk in droplet microfluidic assays.">
+  <title>DROPLET-RISK Atlas</title>
+  <link rel="stylesheet" href="./assets/styles.css">
+</head>
+<body>
+  <header class="hero">
+    <div class="hero-inner">
+      <p class="eyebrow">Descriptor-based prioritization for droplet microfluidics</p>
+      <h1>DROPLET-RISK Atlas</h1>
+      <p class="hero-copy">
+        Search the lightweight curated atlas instantly. When a molecule is absent, search the live ChEMBL service and calculate the same descriptor proxy directly in your browser.
+      </p>
+      <div class="hero-links">
+        <a class="button light" href="#lookup">Open lookup</a>
+        <a class="button ghost" href="#method">Scoring method</a>
+        <a class="button ghost" href="https://github.com/matteobroketa/Droplet-Risk-Atlas" target="_blank" rel="noopener noreferrer">Repository</a>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <section class="section stats" aria-label="Atlas scope">
+      <div class="stat-card"><span>Instant local records</span><strong id="instant-count">—</strong><small>Downloaded once and cached</small></div>
+      <div class="stat-card"><span>Full ChEMBL36 rows processed</span><strong id="full-row-count">—</strong><small>Archived analysis scope</small></div>
+      <div class="stat-card"><span>Full ChEMBL36 rows scored</span><strong id="full-scored-count">—</strong><small>Complete descriptor set</small></div>
+      <div class="stat-card"><span>Model</span><strong class="model-name" id="model-version">—</strong><small>Same coefficients in local and live modes</small></div>
+    </section>
+
+    <section id="lookup" class="section lookup-section">
+      <div class="section-heading">
+        <div>
+          <p class="eyebrow dark">Lookup</p>
+          <h2>Search the atlas</h2>
+        </div>
+        <p>The site does not download the 2.8-million-row table. The compact curated index loads locally; ChEMBL is contacted only when you choose the fallback search.</p>
+      </div>
+
+      <div id="loading-banner" class="notice">Loading the compact local atlas…</div>
+
+      <div class="search-panel">
+        <label for="search-input">Molecule, ChEMBL ID, InChIKey, category, or class</label>
+        <div class="search-row">
+          <input id="search-input" type="search" autocomplete="off" spellcheck="false" placeholder="Examples: imipramine, aspirin, CHEMBL25">
+          <button id="clear-button" class="button secondary" type="button">Clear</button>
+          <button id="export-button" class="button primary" type="button">Export local results</button>
+        </div>
+        <div class="example-row" aria-label="Example searches">
+          <span>Examples:</span>
+          <button type="button" data-example-query="imipramine">imipramine</button>
+          <button type="button" data-example-query="aspirin">aspirin</button>
+          <button type="button" data-example-query="glucose">glucose</button>
+          <button type="button" data-example-query="CHEMBL25">CHEMBL25</button>
+        </div>
+      </div>
+
+      <div class="filter-grid">
+        <label>Dataset<select id="dataset-filter"><option>Loading…</option></select></label>
+        <label>Category<select id="category-filter"><option>Loading…</option></select></label>
+        <label>Risk band<select id="risk-filter"><option>Loading…</option></select></label>
+        <label>Sort<select id="sort-filter">
+          <option value="score_desc">Score: high to low</option>
+          <option value="score_asc">Score: low to high</option>
+          <option value="name_asc">Name: A to Z</option>
+          <option value="dataset_asc">Dataset: A to Z</option>
+        </select></label>
+      </div>
+
+      <div id="chembl-fallback" class="fallback" hidden>
+        <div>
+          <strong>No local record found for “<span id="chembl-fallback-query"></span>”.</strong>
+          <p>Search the live ChEMBL API and calculate a score on demand from the returned molecular properties.</p>
+        </div>
+        <button id="chembl-search-button" class="button primary" type="button">Search ChEMBL</button>
+      </div>
+
+      <div class="lookup-grid">
+        <section class="panel results-panel">
+          <div class="panel-heading">
+            <h3>Local atlas matches</h3>
+            <span id="local-meta">—</span>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr><th>Name</th><th>Risk</th><th>Score</th><th>Index</th><th>ALogP</th><th>PSA</th><th>MW</th><th>ID</th></tr>
+              </thead>
+              <tbody id="local-results-body"></tbody>
+            </table>
+          </div>
+          <p class="table-footnote"><strong id="shown-count">—</strong> records match the active local search and filters. Rendering is capped for browser responsiveness; CSV export includes every local match.</p>
+
+          <div class="chembl-area">
+            <div class="panel-heading">
+              <h3>Live ChEMBL candidates</h3>
+              <span id="chembl-status">ChEMBL is queried only after you request an external search.</span>
+            </div>
+            <div id="chembl-results" class="chembl-results"></div>
+          </div>
+        </section>
+
+        <aside class="panel detail-panel">
+          <div id="record-detail" class="empty-state">Select a local or live ChEMBL record.</div>
+        </aside>
+      </div>
+    </section>
+
+    <section id="method" class="section prose-section">
+      <div class="section-heading">
+        <div><p class="eyebrow dark">Method</p><h2>Unified descriptor score</h2></div>
+      </div>
+      <div class="formula">score = 0.70·ALogP − 0.012·PSA − 0.18·HBD − 0.06·HBA − 0.001·MW + 0.035·RTB + 0.10·aromatic rings</div>
+      <p>The bounded index is <code>sigmoid(−2.1 + score)</code>. The interface applies the same coefficients and cutoffs to archived local records and to live ChEMBL records with all seven required descriptors.</p>
+      <div class="method-grid">
+        <article><h3>Lower</h3><p>Score below −0.2563230877.</p></article>
+        <article><h3>Leaky</h3><p>Score from −0.2563230877 to below 0.1453605434.</p></article>
+        <article><h3>High</h3><p>Score from 0.1453605434 to below 2.1.</p></article>
+        <article><h3>Very high</h3><p>Score at or above 2.1, corresponding to an index at or above 0.50.</p></article>
+      </div>
+      <div class="warning-box">
+        This score is a descriptor-only prioritization proxy. It is not an absolute permeability, leakage constant, or substitute for measurements in the exact oil, surfactant, droplet, temperature, pH, and device-material system.
+      </div>
+    </section>
+
+    <section class="section prose-section">
+      <div class="section-heading"><div><p class="eyebrow dark">Architecture</p><h2>What loads and when</h2></div></div>
+      <ol class="steps">
+        <li><strong>Initial visit:</strong> the browser downloads the application and compact 16k atlas.</li>
+        <li><strong>Local search:</strong> names and identifiers are searched entirely in-browser with no external request.</li>
+        <li><strong>Fallback:</strong> if no local record is found, the user can explicitly search ChEMBL.</li>
+        <li><strong>Live calculation:</strong> the browser calculates the proxy when ChEMBL supplies all required descriptors.</li>
+        <li><strong>Missing properties:</strong> the record remains unscored; when a different ChEMBL parent exists, the interface offers a separately labeled parent calculation.</li>
+      </ol>
+    </section>
+
+    <section class="section prose-section">
+      <div class="section-heading"><div><p class="eyebrow dark">Data and reproducibility</p><h2>Downloads</h2></div></div>
+      <div class="download-grid">
+        <a href="https://github.com/matteobroketa/Droplet-Risk-Atlas/tree/main/data" target="_blank" rel="noopener noreferrer"><strong>Local atlas source</strong><span>Repository data used to build the compact browser asset.</span></a>
+        <a href="https://github.com/matteobroketa/Droplet-Risk-Atlas/releases" target="_blank" rel="noopener noreferrer"><strong>Full dataset release assets</strong><span>Publish compact JSONL.gz or Parquet files here rather than loading them into Pages.</span></a>
+        <a href="https://github.com/matteobroketa/Droplet-Risk-Atlas/blob/main/DROPLET_RISK_refactored_pipeline_corrected_v2.py" target="_blank" rel="noopener noreferrer"><strong>Original pipeline</strong><span>Scoring, figures, and archived publication build.</span></a>
+        <a href="https://github.com/matteobroketa/Droplet-Risk-Atlas/blob/main/DROPLET_RISK_publication_ready_unified_corrected_v2.html" target="_blank" rel="noopener noreferrer"><strong>Archived full publication artifact</strong><span>The previous self-contained HTML, loaded only when opened directly.</span></a>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <p>DROPLET-RISK · Matteo Broketa · <a href="https://orcid.org/0000-0001-7825-1174" target="_blank" rel="noopener noreferrer">ORCID 0000-0001-7825-1174</a></p>
+  </footer>
+
+  <script type="module" src="./assets/app.js"></script>
+</body>
+</html>

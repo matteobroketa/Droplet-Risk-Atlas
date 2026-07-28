@@ -1,0 +1,12 @@
+# Generated lightweight Pages assets
+site/data/lookup-16k.compact.json
+site/data/atlas-summary.json
+site/.nojekyll
+
+# Optional full-atlas release exports
+release-assets/
+
+# Local tooling
+__pycache__/
+*.py[cod]
+.DS_Store

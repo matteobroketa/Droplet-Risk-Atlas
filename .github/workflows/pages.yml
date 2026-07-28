@@ -1,4 +1,4 @@
-name: Deploy DROPLET-RISK to GitHub Pages
+name: Deploy lightweight DROPLET-RISK site
 
 on:
   push:
@@ -16,9 +16,8 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  deploy:
+  build-and-deploy:
     runs-on: ubuntu-latest
-
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
@@ -27,20 +26,37 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@v6
 
-      - name: Prepare static site
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Build compact browser data
         run: |
-          mkdir -p _site
-          cp DROPLET_RISK_publication_ready_unified_corrected_v2.html _site/index.html
-          touch _site/.nojekyll
+          python scripts/build_web_assets.py \
+            --lookup data/lookup_records_unified.json \
+            --summary DROPLET_RISK_unified_summary.json \
+            --site site
+
+      - name: Verify the JavaScript score implementation
+        run: node tests/test_score.mjs
+
+      - name: Validate generated site
+        run: python scripts/validate_web_build.py
+
+      - name: Show deployment sizes
+        run: |
+          du -h site/data/lookup-16k.compact.json
+          du -sh site
 
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v5
 
-      - name: Upload site
+      - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v4
         with:
-          path: _site
+          path: site
 
-      - name: Deploy site
+      - name: Deploy GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
