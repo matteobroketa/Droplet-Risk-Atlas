@@ -1,3 +1,6 @@
+/* Keep layout display rules from overriding the HTML hidden state. */
+[hidden] { display: none !important; }
+
 :root {
   --bg: #f4f7fb;
   --surface: #ffffff;

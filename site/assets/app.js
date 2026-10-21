@@ -42,6 +42,7 @@ const state = {
   sort: "score_desc",
   summary: null,
   chemblResults: [],
+  chemblToken: 0,
   chemblAbortController: null,
   chemblDetailCache: new Map(),
 };
@@ -69,7 +70,8 @@ function normalizeText(value) {
 
 function formatNumber(value, digits = 3) {
   if (value === null || value === undefined || !Number.isFinite(Number(value))) return "—";
-  return Number(value).toFixed(digits).replace(/\.?0+$/, "");
+  const formatted = Number(value).toFixed(digits);
+  return formatted.includes(".") ? formatted.replace(/\.?0+$/, "") : formatted;
 }
 
 function formatInteger(value) {
@@ -79,10 +81,24 @@ function formatInteger(value) {
 
 function debounce(callback, delayMs) {
   let timer = null;
-  return (...args) => {
+  let pendingArgs = null;
+  const flush = () => {
     window.clearTimeout(timer);
-    timer = window.setTimeout(() => callback(...args), delayMs);
+    const args = pendingArgs;
+    pendingArgs = null;
+    if (args) callback(...args);
   };
+  const debounced = (...args) => {
+    window.clearTimeout(timer);
+    pendingArgs = args;
+    timer = window.setTimeout(flush, delayMs);
+  };
+  debounced.cancel = () => {
+    window.clearTimeout(timer);
+    pendingArgs = null;
+  };
+  debounced.flush = flush;
+  return debounced;
 }
 
 async function fetchJson(url, options = {}) {
@@ -210,6 +226,7 @@ function renderLocalResults() {
 
   document.querySelectorAll("[data-local-index]").forEach((row) => {
     row.addEventListener("click", () => {
+      resetChemblSearch();
       state.selectedLocalIndex = Number(row.dataset.localIndex);
       renderLocalResults();
       renderLocalDetail();
@@ -268,6 +285,21 @@ function renderFallbackPrompt() {
   $("chembl-search-button").textContent = `Search ChEMBL for “${query}”`;
 }
 
+function cancelChemblRequest() {
+  state.chemblToken += 1;
+  state.chemblAbortController?.abort();
+  state.chemblAbortController = null;
+  $("chembl-search-button").disabled = false;
+  return state.chemblToken;
+}
+
+function resetChemblSearch() {
+  cancelChemblRequest();
+  state.chemblResults = [];
+  $("chembl-results").innerHTML = "";
+  setChemblStatus("ChEMBL is queried only after you request an external search.");
+}
+
 function setChemblStatus(message, kind = "neutral") {
   const status = $("chembl-status");
   status.textContent = message;
@@ -310,24 +342,24 @@ function withOnly(url, fields) {
   return `${url}${separator}only=${encodeURIComponent(fields.join(","))}`;
 }
 
-async function searchChemblCandidates(query) {
+async function searchChemblCandidates(query, token) {
   const base = `${CONFIG.chemblApiBase}/molecule/search.json?q=${encodeURIComponent(query)}&limit=${CONFIG.chemblResultLimit}`;
   try {
     return await chemblRequest(withOnly(base, CONFIG.chemblSearchFields));
   } catch (error) {
-    if (error?.name === "AbortError") throw error;
+    if (error?.name === "AbortError" || token !== state.chemblToken) throw error;
     return chemblRequest(base);
   }
 }
 
-async function fetchChemblMolecule(moleculeId) {
+async function fetchChemblMolecule(moleculeId, token) {
   if (state.chemblDetailCache.has(moleculeId)) return state.chemblDetailCache.get(moleculeId);
   const base = `${CONFIG.chemblApiBase}/molecule/${encodeURIComponent(moleculeId)}.json`;
   let molecule;
   try {
     molecule = await chemblRequest(withOnly(base, CONFIG.chemblDetailFields));
   } catch (error) {
-    if (error?.name === "AbortError") throw error;
+    if (error?.name === "AbortError" || token !== state.chemblToken) throw error;
     molecule = await chemblRequest(base);
   }
   state.chemblDetailCache.set(moleculeId, molecule);
@@ -337,6 +369,7 @@ async function fetchChemblMolecule(moleculeId) {
 async function searchChembl() {
   const query = state.query.trim();
   if (query.length < 2) return;
+  const token = cancelChemblRequest();
 
   const button = $("chembl-search-button");
   button.disabled = true;
@@ -348,11 +381,12 @@ async function searchChembl() {
       const id = query.toUpperCase();
       state.chemblResults = [{ molecule_chembl_id: id, pref_name: id, _apiOrder: 0 }];
       renderChemblResults();
-      await loadChemblDetailById(id);
+      await loadChemblDetailById(id, token);
       return;
     }
 
-    const payload = await searchChemblCandidates(query);
+    const payload = await searchChemblCandidates(query, token);
+    if (token !== state.chemblToken) return;
     const molecules = Array.isArray(payload?.molecules) ? payload.molecules : [];
     const seen = new Set();
     const normalizedQuery = normalizeText(query);
@@ -378,13 +412,14 @@ async function searchChembl() {
     );
     renderChemblResults();
   } catch (error) {
+    if (token !== state.chemblToken) return;
     const message = error?.name === "AbortError"
       ? "The ChEMBL request timed out or was replaced by a newer request."
       : `ChEMBL search failed: ${error.message}`;
     setChemblStatus(message, "error");
     $("chembl-results").innerHTML = `<div class="empty-state">The local 16k atlas remains available. Retry the external search later.</div>`;
   } finally {
-    button.disabled = false;
+    if (token === state.chemblToken) button.disabled = false;
   }
 }
 
@@ -451,10 +486,11 @@ function liveResultDetailHtml(molecule, result, contextNote = "") {
   `;
 }
 
-async function loadChemblDetailById(moleculeId) {
+async function loadChemblDetailById(moleculeId, token = cancelChemblRequest()) {
   $("record-detail").innerHTML = `<div class="empty-state">Loading ${escapeHtml(moleculeId)} descriptors from ChEMBL…</div>`;
   try {
-    const molecule = await fetchChemblMolecule(moleculeId);
+    const molecule = await fetchChemblMolecule(moleculeId, token);
+    if (token !== state.chemblToken) return;
     const result = scoreChemblMolecule(molecule);
     $("record-detail").innerHTML = liveResultDetailHtml(molecule, result);
     setChemblStatus(
@@ -468,6 +504,7 @@ async function loadChemblDetailById(moleculeId) {
       parentButton.addEventListener("click", () => scoreParentMolecule(parentButton.dataset.parentId, molecule));
     }
   } catch (error) {
+    if (token !== state.chemblToken) return;
     const message = error?.name === "AbortError"
       ? "The ChEMBL detail request timed out or was replaced by a newer request."
       : `Unable to load ${moleculeId}: ${error.message}`;
@@ -477,10 +514,12 @@ async function loadChemblDetailById(moleculeId) {
 }
 
 async function scoreParentMolecule(parentId, originalMolecule) {
+  const token = cancelChemblRequest();
   const button = $("score-parent-button");
   if (button) button.disabled = true;
   try {
-    const parent = await fetchChemblMolecule(parentId);
+    const parent = await fetchChemblMolecule(parentId, token);
+    if (token !== state.chemblToken) return;
     const result = scoreChemblMolecule(parent);
     $("record-detail").innerHTML = liveResultDetailHtml(
       parent,
@@ -488,6 +527,7 @@ async function scoreParentMolecule(parentId, originalMolecule) {
       `The selected record ${originalMolecule?.molecule_chembl_id} lacked complete descriptors. This score uses its ChEMBL parent ${parentId}; it is not a score for the original salt or form.`,
     );
   } catch (error) {
+    if (token !== state.chemblToken) return;
     setChemblStatus(`Unable to load parent ${parentId}: ${error.message}`, "error");
     if (button) button.disabled = false;
   }
@@ -512,6 +552,9 @@ function exportFilteredCsv() {
 }
 
 function clearSearch() {
+  onSearchInput.cancel();
+  resetChemblSearch();
+  state.selectedLocalIndex = 0;
   state.query = "";
   state.dataset = "all";
   state.risk = "all";
@@ -567,29 +610,42 @@ const onSearchInput = debounce((value) => {
   renderLocalDetail();
 }, 120);
 
-$("search-input").addEventListener("input", (event) => onSearchInput(event.target.value));
+$("search-input").addEventListener("input", (event) => {
+  resetChemblSearch();
+  onSearchInput(event.target.value);
+});
 $("clear-button").addEventListener("click", clearSearch);
-$("export-button").addEventListener("click", exportFilteredCsv);
-$("chembl-search-button").addEventListener("click", searchChembl);
+$("export-button").addEventListener("click", () => {
+  onSearchInput.flush();
+  exportFilteredCsv();
+});
+$("chembl-search-button").addEventListener("click", () => {
+  onSearchInput.flush();
+  return searchChembl();
+});
 $("dataset-filter").addEventListener("change", (event) => {
+  resetChemblSearch();
   state.dataset = event.target.value;
   state.selectedLocalIndex = 0;
   renderLocalResults();
   renderLocalDetail();
 });
 $("risk-filter").addEventListener("change", (event) => {
+  resetChemblSearch();
   state.risk = event.target.value;
   state.selectedLocalIndex = 0;
   renderLocalResults();
   renderLocalDetail();
 });
 $("category-filter").addEventListener("change", (event) => {
+  resetChemblSearch();
   state.category = event.target.value;
   state.selectedLocalIndex = 0;
   renderLocalResults();
   renderLocalDetail();
 });
 $("sort-filter").addEventListener("change", (event) => {
+  resetChemblSearch();
   state.sort = event.target.value;
   state.selectedLocalIndex = 0;
   renderLocalResults();
@@ -598,6 +654,8 @@ $("sort-filter").addEventListener("change", (event) => {
 
 document.querySelectorAll("[data-example-query]").forEach((button) => {
   button.addEventListener("click", () => {
+    onSearchInput.cancel();
+    resetChemblSearch();
     const query = button.dataset.exampleQuery;
     $("search-input").value = query;
     state.query = query;

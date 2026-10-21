@@ -45,6 +45,7 @@ def main() -> int:
         run([node, "--check", "site/assets/app.js"])
         run([node, "--check", "site/assets/score.js"])
         run([node, "tests/test_score.mjs"])
+        run([node, "tests/test_app.mjs"])
         run([sys.executable, "scripts/validate_web_build.py"])
     except subprocess.CalledProcessError as error:
         print(f"ERROR: verification failed with exit code {error.returncode}.", file=sys.stderr)

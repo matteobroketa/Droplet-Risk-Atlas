@@ -38,8 +38,10 @@ jobs:
             --summary DROPLET_RISK_unified_summary.json \
             --site site
 
-      - name: Verify the JavaScript score implementation
-        run: node tests/test_score.mjs
+      - name: Verify scoring and browser interactions offline
+        run: |
+          node tests/test_score.mjs
+          node tests/test_app.mjs
 
       - name: Validate generated site
         run: python scripts/validate_web_build.py

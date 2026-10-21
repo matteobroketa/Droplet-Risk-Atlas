@@ -89,6 +89,8 @@ Open:
 http://localhost:8000/
 ```
 
+The verification also runs offline browser-logic regressions for descriptor formatting, Clear/example interactions, current-query CSV export, and delayed ChEMBL responses. Run these checks alone with `node tests/test_app.mjs`; no external API is contacted.
+
 Optional live API diagnostic:
 
 ```bash
@@ -119,7 +121,7 @@ python scripts/export_full_atlas.py /path/to/chembl36_molecule_property_table_v2
 
 Outputs are written to `release-assets/` by default. Upload the generated `.jsonl.gz` parts and manifest to a GitHub Release. Do not copy them into `site/`.
 
-See `DEPLOYMENT.md` for complete installation, validation, release, troubleshooting, and rollback instructions.
+Use [the local verification script](scripts/verify_drop_in.py) before deployment. The deployment and archived-export commands above describe the supported publishing paths.
 
 ## Empirical basis
 
